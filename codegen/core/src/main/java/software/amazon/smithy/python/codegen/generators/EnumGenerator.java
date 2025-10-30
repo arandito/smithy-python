@@ -10,6 +10,7 @@ import software.amazon.smithy.model.traits.DocumentationTrait;
 import software.amazon.smithy.model.traits.EnumValueTrait;
 import software.amazon.smithy.python.codegen.GenerationContext;
 import software.amazon.smithy.python.codegen.SymbolProperties;
+import software.amazon.smithy.python.codegen.sections.EnumSection;
 import software.amazon.smithy.utils.SmithyInternalApi;
 
 /**
@@ -30,9 +31,10 @@ public final class EnumGenerator implements Runnable {
         var enumSymbol = context.symbolProvider().toSymbol(shape).expectProperty(SymbolProperties.ENUM_SYMBOL);
         context.writerDelegator().useShapeWriter(shape, writer -> {
             writer.addStdlibImport("enum", "StrEnum");
+            writer.pushState(new EnumSection(shape, enumSymbol));
             writer.openBlock("class $L(StrEnum):", "", enumSymbol.getName(), () -> {
                 shape.getTrait(DocumentationTrait.class).ifPresent(trait -> {
-                    writer.writeDocs(writer.formatDocs(trait.getValue()));
+                    writer.writeDocs(trait.getValue());
                 });
 
                 for (MemberShape member : shape.members()) {
@@ -42,6 +44,7 @@ public final class EnumGenerator implements Runnable {
                     member.getTrait(DocumentationTrait.class).ifPresent(trait -> writer.writeDocs(trait.getValue()));
                 }
             });
+            writer.popState();
         });
     }
 }
