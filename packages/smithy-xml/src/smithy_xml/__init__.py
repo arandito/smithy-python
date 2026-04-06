@@ -15,7 +15,16 @@ from ._private.readers import XMLEventReader as _XMLEventReader
 from .settings import XMLSettings
 
 __version__ = "0.0.0"
-__all__ = ("XMLCodec", "XMLSettings")
+__all__ = ("XMLCodec", "XMLDryRunTest", "XMLSettings")
+
+
+class XMLDryRunTest:
+    def __init__(self, test: str):
+        self._test = test
+
+    @property
+    def test(self) -> str:
+        return self._test
 
 
 class XMLCodec(Codec):
