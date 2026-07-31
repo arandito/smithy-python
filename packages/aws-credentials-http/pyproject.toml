@@ -1,0 +1,49 @@
+[project]
+name = "aws-credentials-http"
+dynamic = ["version"]
+requires-python = ">=3.12"
+authors = [
+  {name = "Amazon Web Services"},
+]
+description = "Container HTTP credential provider for AWS SDKs."
+readme = "README.md"
+license = {text = "Apache License 2.0"}
+keywords = ["aws", "credentials", "http", "ecs", "eks"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries"
+]
+dependencies = [
+  "smithy-aws-core~=0.7.0",
+  "smithy-core~=0.6.0",
+  "smithy-http[aiohttp]~=0.4.0",
+]
+
+[project.urls]
+"Code" = "https://github.com/smithy-lang/smithy-python/tree/develop/packages/aws-credentials-http/"
+"Issue tracker" = "https://github.com/smithy-lang/smithy-python/issues"
+
+[project.entry-points."smithy_aws_core.identity.chain_providers"]
+EcsContainer = "aws_credentials_http.providers:EcsContainerProvider"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/aws_credentials_http/__init__.py"
+
+[tool.hatch.build]
+exclude = [
+  "tests",
+]
+
+[tool.ruff]
+src = ["src"]

@@ -32,6 +32,10 @@ default-groups = ["test", "lint", "typing", "changelog"]
 members = ["packages/*"]
 
 [tool.uv.sources]
+aws_credentials_http = { workspace = true }
+aws_credentials_imds = { workspace = true }
+aws_credentials_sts = { workspace = true }
+aws_sdk_sts = { workspace = true }
 smithy_core = { workspace = true }
 smithy_http = { workspace = true }
 smithy_json = { workspace = true }

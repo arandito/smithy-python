@@ -4,7 +4,11 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "aws-credentials-http",
+    "aws-credentials-imds",
+    "aws-credentials-sts",
     "aws-sdk-signers",
+    "aws-sdk-sts",
     "smithy-aws-core",
     "smithy-aws-event-stream",
     "smithy-core",
@@ -146,8 +150,94 @@ wheels = [
 ]
 
 [[package]]
+name = "aws-credentials-http"
+source = { editable = "packages/aws-credentials-http" }
+dependencies = [
+    { name = "smithy-aws-core" },
+    { name = "smithy-core" },
+    { name = "smithy-http", extra = ["aiohttp"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "smithy-aws-core", editable = "packages/smithy-aws-core" },
+    { name = "smithy-core", editable = "packages/smithy-core" },
+    { name = "smithy-http", extras = ["aiohttp"], editable = "packages/smithy-http" },
+]
+
+[[package]]
+name = "aws-credentials-imds"
+source = { editable = "packages/aws-credentials-imds" }
+dependencies = [
+    { name = "smithy-aws-core" },
+    { name = "smithy-core" },
+    { name = "smithy-http", extra = ["aiohttp"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "smithy-aws-core", editable = "packages/smithy-aws-core" },
+    { name = "smithy-core", editable = "packages/smithy-core" },
+    { name = "smithy-http", extras = ["aiohttp"], editable = "packages/smithy-http" },
+]
+
+[[package]]
+name = "aws-credentials-sts"
+source = { editable = "packages/aws-credentials-sts" }
+dependencies = [
+    { name = "aws-sdk-sts" },
+    { name = "smithy-aws-core" },
+    { name = "smithy-core" },
+    { name = "smithy-http" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aws-sdk-sts", editable = "packages/aws-sdk-sts" },
+    { name = "smithy-aws-core", editable = "packages/smithy-aws-core" },
+    { name = "smithy-core", editable = "packages/smithy-core" },
+    { name = "smithy-http", editable = "packages/smithy-http" },
+]
+
+[[package]]
 name = "aws-sdk-signers"
 source = { editable = "packages/aws-sdk-signers" }
+
+[[package]]
+name = "aws-sdk-sts"
+version = "0.1.0"
+source = { editable = "packages/aws-sdk-sts" }
+dependencies = [
+    { name = "smithy-aws-core", extra = ["xml"] },
+    { name = "smithy-core" },
+    { name = "smithy-http", extra = ["aiohttp"] },
+]
+
+[package.optional-dependencies]
+assume-role = [
+    { name = "aws-credentials-sts" },
+]
+
+[package.dev-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aws-credentials-sts", marker = "extra == 'assume-role'", editable = "packages/aws-credentials-sts" },
+    { name = "smithy-aws-core", extras = ["xml"], editable = "packages/smithy-aws-core" },
+    { name = "smithy-core", editable = "packages/smithy-core" },
+    { name = "smithy-http", extras = ["aiohttp"], editable = "packages/smithy-http" },
+]
+provides-extras = ["assume-role"]
+
+[package.metadata.requires-dev]
+test = [
+    { name = "pytest", specifier = ">=9.0.1,<10.0.0" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0,<1.4.0" },
+]
 
 [[package]]
 name = "awscrt"
