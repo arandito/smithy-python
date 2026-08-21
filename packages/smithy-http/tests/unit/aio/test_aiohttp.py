@@ -94,6 +94,28 @@ async def test_send_disables_redirects() -> None:
     assert session.request.call_args.kwargs["allow_redirects"] is False
 
 
+async def test_send_preserves_blank_query_values() -> None:
+    client, session = _create_client()
+    request = HTTPRequest(
+        method="GET",
+        destination=URI(scheme="https", host="example.com", path="/", query="sync"),
+        body=AsyncBytesReader(b""),
+        fields=Fields(),
+    )
+
+    await client.send(request)
+
+    assert session.request.call_args.kwargs["params"] == {"sync": [""]}
+
+
+async def test_send_disables_automatic_content_type() -> None:
+    client, session = _create_client()
+
+    await client.send(_create_request())
+
+    assert session.request.call_args.kwargs["skip_auto_headers"] == ["Content-Type"]
+
+
 async def test_send_streams_response_body_and_releases_it_on_close() -> None:
     async def chunks() -> AsyncIterator[bytes]:
         yield b"first"

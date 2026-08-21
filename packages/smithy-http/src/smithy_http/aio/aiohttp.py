@@ -131,10 +131,11 @@ class AIOHTTPClient(HTTPClient):
         resp = await self._session.request(
             method=request.method,
             url=self._serialize_uri_without_query(request.destination),
-            params=parse_qs(request.destination.query),  # type: ignore
+            params=parse_qs(request.destination.query, keep_blank_values=True),  # type: ignore
             headers=headers_list,
             data=body,
             allow_redirects=False,
+            skip_auto_headers=["Content-Type"],
         )
         try:
             return self._marshal_response(resp)
