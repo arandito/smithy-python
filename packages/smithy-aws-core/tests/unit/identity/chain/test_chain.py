@@ -6,6 +6,8 @@ from typing import Any, assert_type
 
 import pytest
 import smithy_aws_core.identity.chain as chain_module
+from smithy_aws_core.config.file_parser import Section, StandardizedOutput
+from smithy_aws_core.config.merged_config import MergedConfig
 from smithy_aws_core.identity import (
     AWSCredentialsIdentity,
     AWSIdentityProperties,
@@ -14,6 +16,7 @@ from smithy_aws_core.identity import (
 from smithy_aws_core.identity.chain import (
     IdentityChainConfigurationError,
     IdentityChainError,
+    UnclaimedSource,
 )
 from smithy_aws_core.identity.chain.ordering import (
     After,
@@ -22,6 +25,12 @@ from smithy_aws_core.identity.chain.ordering import (
     Standard,
     StandardProvider,
 )
+from smithy_aws_core.identity.chain.provider import ChainSetup
+from smithy_aws_core.identity.chain.providers.profile import (
+    ProfileSessionCredentialsProvider,
+    ProfileStaticCredentialsProvider,
+)
+from smithy_aws_core.identity.chain.providers.shared_config import SharedConfigProvider
 from smithy_core.aio.interfaces.identity import IdentityResolver
 from smithy_core.exceptions import SmithyIdentityError
 
@@ -233,6 +242,103 @@ def test_sort_rejects_unsupported_ordering_constraint() -> None:
         match="Provider _StubProvider returned an unsupported ordering constraint",
     ):
         chain_module._sort_by_ordering((provider,))
+
+
+def test_find_unclaimed_sources_includes_setup_detection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _not_detected(slot: StandardProvider) -> bool:
+        return False
+
+    monkeypatch.setattr(StandardProvider, "is_detected", _not_detected)
+    setup = ChainSetup()
+    setup.mark_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+
+    sources = chain_module._find_unclaimed_sources((), setup)
+
+    assert sources == (
+        UnclaimedSource(
+            source_name="ProfileAssumeRole",
+            package="aws-credentials-sts",
+        ),
+    )
+
+
+def test_find_unclaimed_sources_ignores_claimed_setup_detection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _not_detected(slot: StandardProvider) -> bool:
+        return False
+
+    monkeypatch.setattr(StandardProvider, "is_detected", _not_detected)
+    provider = _StubProvider(
+        "assume-role",
+        Standard(slot=StandardProvider.PROFILE_ASSUME_ROLE),
+    )
+    setup = ChainSetup()
+    setup.mark_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+
+    assert chain_module._find_unclaimed_sources((provider,), setup) == ()
+
+
+async def test_create_reports_missing_sts_for_assume_role_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def _not_detected(slot: StandardProvider) -> bool:
+        return False
+
+    monkeypatch.setattr(StandardProvider, "is_detected", _not_detected)
+    monkeypatch.setattr(
+        chain_module,
+        "_discover_chain_identity_providers",
+        lambda: (
+            SharedConfigProvider(),
+            ProfileSessionCredentialsProvider(),
+            ProfileStaticCredentialsProvider(),
+        ),
+    )
+    config_file = MergedConfig(
+        StandardizedOutput(
+            profiles={
+                "default": Section(
+                    properties={
+                        "role_arn": "arn:aws:iam::123456789012:role/test",
+                        "source_profile": "default",
+                        "aws_access_key_id": "akid",
+                        "aws_secret_access_key": "secret",
+                    }
+                )
+            }
+        ),
+        StandardizedOutput(),
+    )
+
+    chain = await IdentityChain.create(
+        AWSCredentialsIdentity,
+        config_file=config_file,
+    )
+
+    suggestion = (
+        "ProfileAssumeRole credential source was detected but no provider claims it; "
+        "install 'aws-credentials-sts'."
+    )
+    assert caplog.messages == [suggestion]
+
+    with pytest.raises(
+        IdentityChainError,
+        match=r"No credential providers were configured to resolve an identity. "
+        r"ProfileAssumeRole credential source was detected but no provider claims it; "
+        r"install 'aws-credentials-sts'.",
+    ) as excinfo:
+        await chain.get_identity(properties={})
+
+    assert excinfo.value.unclaimed_sources == (
+        UnclaimedSource(
+            source_name="ProfileAssumeRole",
+            package="aws-credentials-sts",
+        ),
+    )
 
 
 async def test_all_miss_raises_with_per_provider_failures() -> None:

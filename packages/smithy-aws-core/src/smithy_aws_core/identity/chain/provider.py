@@ -11,7 +11,7 @@ from smithy_core.interfaces.identity import Identity
 from smithy_http.aio.interfaces import HTTPClient
 
 from ...config.merged_config import MergedConfig
-from .ordering import OrderingConstraint
+from .ordering import OrderingConstraint, StandardProvider
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -50,6 +50,7 @@ class ChainSetup:
             {} if properties is None else properties
         )
         self._resolvers: list[NamedResolver] = []
+        self._detected_slots: set[StandardProvider] = set()
         self._current_provider: ChainIdentityProvider | None = None
         self._terminal = False
 
@@ -103,6 +104,14 @@ class ChainSetup:
     def set_profile_name(self, profile_name: str) -> None:
         """Set the resolved name of the active profile."""
         self._profile_name = profile_name
+
+    def mark_detected(self, slot: StandardProvider) -> None:
+        """Record that configuration for a standard provider slot was detected."""
+        self._detected_slots.add(slot)
+
+    def is_detected(self, slot: StandardProvider) -> bool:
+        """Return whether configuration for a standard provider slot was detected."""
+        return slot in self._detected_slots
 
     def add_resolver(self, resolver: IdentityResolver[Any, Any]) -> None:
         """Add a named resolver and continue assembly."""

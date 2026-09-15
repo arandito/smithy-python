@@ -5,9 +5,28 @@ import os
 from smithy_core.interfaces.identity import Identity
 
 from ....config import load_config
+from ....config.merged_config import MergedConfig
 from ...components import AWSCredentialsIdentity
 from ..ordering import Standard, StandardProvider
 from ..provider import ChainSetup
+
+_ROLE_ARN = "role_arn"
+_SOURCE_PROFILE = "source_profile"
+_CREDENTIAL_SOURCE = "credential_source"
+
+
+def _mark_detected_providers(
+    config_file: MergedConfig,
+    profile_name: str,
+    setup: ChainSetup,
+) -> None:
+    role_arn = config_file.get(profile_name, _ROLE_ARN)
+    source_profile = config_file.get(profile_name, _SOURCE_PROFILE)
+    credential_source = config_file.get(profile_name, _CREDENTIAL_SOURCE)
+    if role_arn is not None and (
+        source_profile is not None or credential_source is not None
+    ):
+        setup.mark_detected(StandardProvider.PROFILE_ASSUME_ROLE)
 
 
 class SharedConfigProvider:
@@ -35,3 +54,5 @@ class SharedConfigProvider:
 
         profile_name = setup.profile_name or os.getenv("AWS_PROFILE") or "default"
         setup.set_profile_name(profile_name)
+
+        _mark_detected_providers(config_file, profile_name, setup)

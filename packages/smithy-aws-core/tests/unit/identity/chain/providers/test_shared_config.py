@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from smithy_aws_core.config.merged_config import MergedConfig
+from smithy_aws_core.identity.chain.ordering import StandardProvider
 from smithy_aws_core.identity.chain.provider import ChainSetup
 from smithy_aws_core.identity.chain.providers import (
     shared_config as shared_config_module,
@@ -82,3 +83,45 @@ async def test_loads_when_not_preloaded(
     assert setup.profile_name == "default"
     assert setup.resolvers == ()
     load_config.assert_awaited_once_with()
+
+
+@pytest.mark.parametrize("source_property", ["source_profile", "credential_source"])
+async def test_marks_profile_assume_role_as_detected(
+    source_property: str,
+    setup_provider: Callable[..., Awaitable[ChainSetup]],
+    merged_config: Callable[..., MergedConfig],
+) -> None:
+    setup = await setup_provider(
+        SharedConfigProvider(),
+        config_file=merged_config(
+            {
+                "default": {
+                    "role_arn": "arn:aws:iam::123456789012:role/test",
+                    source_property: "source",
+                }
+            }
+        ),
+    )
+
+    assert setup.is_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        {"role_arn": "arn:aws:iam::123456789012:role/test"},
+        {"source_profile": "source"},
+        {"credential_source": "Environment"},
+    ],
+)
+async def test_does_not_mark_incomplete_profile_assume_role(
+    profile: dict[str, str],
+    setup_provider: Callable[..., Awaitable[ChainSetup]],
+    merged_config: Callable[..., MergedConfig],
+) -> None:
+    setup = await setup_provider(
+        SharedConfigProvider(),
+        config_file=merged_config({"default": profile}),
+    )
+
+    assert not setup.is_detected(StandardProvider.PROFILE_ASSUME_ROLE)

@@ -120,6 +120,7 @@ def _validate_providers(providers: Sequence[ChainIdentityProvider]) -> None:
 
 def _find_unclaimed_sources(
     providers: Sequence[ChainIdentityProvider],
+    setup: ChainSetup,
 ) -> tuple[UnclaimedSource, ...]:
     claimed_slots = {
         provider.ordering.slot
@@ -129,7 +130,7 @@ def _find_unclaimed_sources(
     unclaimed_sources: list[UnclaimedSource] = []
 
     for slot in StandardProvider:
-        if slot in claimed_slots or not slot.is_detected():
+        if slot in claimed_slots or not (slot.is_detected() or setup.is_detected(slot)):
             continue
         package = slot.module_suggestion
         if package:
@@ -203,7 +204,6 @@ class IdentityChain[I: Identity](IdentityResolver[I, Mapping[str, Any]]):
             region_override=region_override,
             http_client=http_client,
         )
-        unclaimed_sources = _find_unclaimed_sources(discovered_providers)
 
         for provider in providers:
             setup.set_current_provider(provider)
@@ -211,6 +211,7 @@ class IdentityChain[I: Identity](IdentityResolver[I, Mapping[str, Any]]):
             if setup.terminal:
                 break
 
+        unclaimed_sources = _find_unclaimed_sources(discovered_providers, setup)
         for source in unclaimed_sources:
             logger.warning(str(source))
         return IdentityChain(

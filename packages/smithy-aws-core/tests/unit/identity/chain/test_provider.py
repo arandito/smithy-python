@@ -96,3 +96,13 @@ def test_properties_bag_is_shared_and_mutable() -> None:
     setup.properties["key"] = "value"
 
     assert setup.properties["key"] == "value"
+
+
+def test_tracks_detected_standard_provider_slots() -> None:
+    setup = ChainSetup()
+
+    setup.mark_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+    setup.mark_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+
+    assert setup.is_detected(StandardProvider.PROFILE_ASSUME_ROLE)
+    assert not setup.is_detected(StandardProvider.PROFILE_WEB_IDENTITY)
